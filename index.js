@@ -10,7 +10,8 @@ const { dbConnect } = require("./db.js");
 // Define Schema & Model
 const loginSchema = new mongoose.Schema({
     username: { type: String, required: true },
-    password: { type: String, required: true } // Should be hashed before storing
+    password: { type: String, required: true }, // Should be hashed before storing
+    email : {type : String , required:true}
 });
 
 const loginModel = mongoose.model("login_details", loginSchema);
@@ -22,14 +23,14 @@ dbConnect();
 
 // Login Route - Find User by Username
 app.post('/login', async (req, res) => {
-    console.log(req.body.username);
+    // console.log(req.body.username);
 
     if (!req.body.username) {
         return res.status(400).json({ error: "Username is required" });
     }
 
     try {
-        let data = await loginModel.findOne({username:req.body.username,password: req.body.password});
+        let data = await loginModel.findOne({username:req.body.username,password: req.body.password,email:req.body.email});
         
         if (!data) {
             return res.status(404).json({ error: "User not found" });
@@ -56,6 +57,7 @@ app.post("/register",async(req,res)=>{
     }
 
 })
+
 // Start Server
 const port = 3001;
 app.listen(port, () => {

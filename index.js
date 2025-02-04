@@ -30,7 +30,7 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        let data = await loginModel.findOne({username:req.body.username,password: req.body.password,email:req.body.email});
+        let data = await loginModel.findOne({username:req.body.username,password: req.body.password});
         
         if (!data) {
             return res.status(404).json({ error: "User not found" });

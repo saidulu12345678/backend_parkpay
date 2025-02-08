@@ -6,7 +6,6 @@ const app = express();
 
 
 
-
 app.use(express.json());
 app.use(cors())
 const { dbConnect } = require("./db.js");
@@ -19,6 +18,15 @@ const loginSchema = new mongoose.Schema({
 });
 
 const loginModel = mongoose.model("login_details", loginSchema);
+
+const parkingSchema = new mongoose.Schema({
+    name: String,
+    latitude: Number,
+    longitude: Number,
+  });
+  
+  const ParkingLocation = mongoose.model("ParkingLocation", parkingSchema);
+
 
 mongoose.connection.once("open",()=>{
     console.log("connected to database "+mongoose.connection.name);
@@ -48,6 +56,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// register
 app.post("/register",async(req,res)=>{
     try{
         let data = await loginModel.create(req.body);
@@ -61,6 +70,17 @@ app.post("/register",async(req,res)=>{
     }
 
 })
+// parking location
+app.post("/parking", async (req, res) => {
+    try {
+      const { name, latitude, longitude } = req.body;
+      const newLocation = new ParkingLocation({ name, latitude, longitude });
+      await newLocation.save();
+      res.json({ message: "Location added successfully", location: newLocation });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add location" });
+    }
+  });
 
 // Start Server
 const port = 3001;

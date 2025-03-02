@@ -194,31 +194,19 @@ mongoose.connection.once("open", () => {
 // ✅ Register User (With Password Hashing)
 // const bcrypt = require("bcrypt");
 
-app.post("/register", async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
-
-        if (!username || !email || !password) {
-            return res.status(400).json({ error: "All fields are required" });
-        }
-
-        // ✅ Hash the password before saving
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        let newUser = new loginModel({
-            username,
-            email,
-            password: hashedPassword, // Store hashed password
-        });
-
-        await newUser.save();
-
-        res.json({ success: true, message: "User registered successfully" });
-    } catch (err) {
-        console.error("Error in registration:", err);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
+app.post("/register",async(req,res)=>{
+      try{
+          let data = await loginModel.create(req.body);
+          
+          console.log(data);
+          res.json(data);
+      } 
+      catch(err) {
+          console.error("Error in getting data:", err);
+          res.status(500).json({ error: "Internal Server Error" });
+      }
+  
+  })
 
 // ✅ Login Route (With Password Verification)
 app.post("/login", async (req, res) => {
@@ -300,9 +288,14 @@ app.post("/bookings", async (req, res) => {
       res.status(500).json({ message: "Error fetching bookings", error: error.message });
     }
   });
-
-
-
+  app.get("/email", async (req, res) => {
+    try {
+      const user = await loginModel.find        ();
+      res.send(user);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching bookings", error: error.message });
+    }
+  });
 
 
 

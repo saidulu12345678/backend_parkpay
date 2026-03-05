@@ -1,170 +1,30 @@
-// const express = require("express");
-// const mongoose = require("mongoose");
-// require("dotenv").config();
-// const cors = require("cors")
-// const app = express();
-
-
-
-// app.use(express.json());
-// app.use(cors())
-// const { dbConnect } = require("./db.js");
-
-// // Define Schema & Model
-// const loginSchema = new mongoose.Schema({
-//     username: { type: String, required: true },
-//     password: { type: String, required: true }, // Should be hashed before storing
-//     email : {type : String , required:true}
-// });
-
-// const loginModel = mongoose.model("login_details", loginSchema);
-
-// const parkingSchema = new mongoose.Schema({
-//     name: String,
-//     latitude: Number,
-//     longitude: Number,
-//   });
-  
-//   const ParkingLocation = mongoose.model("ParkingLocation", parkingSchema);
-
-
-// mongoose.connection.once("open",()=>{
-//     console.log("connected to database "+mongoose.connection.name);
-// })
-// dbConnect();
-
-// // Login Route - Find User by Username
-// app.post('/login', async (req, res) => {
-//     // console.log(req.body.username);
-
-//     if (!req.body.username) {
-//         return res.status(400).json({ error: "Username is required" });
-//     }
-
-//     try {
-//         let data = await loginModel.find({});
-//         console.log(data)
-        
-//         if (!data) {
-//             return res.status(404).json({ error: "User not found" });
-//         }
-
-//         console.log(data);
-//         res.json(data);
-//     } catch (err) {
-//         console.error("Error in getting data:", err);
-//         res.status(500).json({ error: "Internal Server Error" });
-//     }
-// });
-
-// // --------------------------------------------------------------
-// // app.post("/login", async (req, res) => {
-// //   const { username, password } = req.body;
-
-// //   // 🔹 Check Admin Login First
-// //   if (username === "Saidulu" && password === "Saigoud@7780") {
-// //       return res.json({ success: true, role: "admin" });
-// //   }
-
-// //   // 🔹 Otherwise, Check Database for Normal Users
-// //   try {
-// //       const user = await loginModel.findOne({ username, password });
-
-// //       if (!user) {
-// //           return res.status(404).json({ success: false, error: "Invalid credentials" });
-// //       }
-
-// //       res.json({ success: true, role: "user" });
-// //   } catch (err) {
-// //       console.error("Error in getting data:", err);
-// //       res.status(500).json({ success: false, error: "Internal Server Error" });
-// //   }
-// // });
-
-// // --------------------------------------------------------------------
-
-// // register
-// app.post("/register",async(req,res)=>{
-//     try{
-//         let data = await loginModel.create(req.body);
-        
-//         console.log(data);
-//         res.json(data);
-//     } 
-//     catch(err) {
-//         console.error("Error in getting data:", err);
-//         res.status(500).json({ error: "Internal Server Error" });
-//     }
-
-// })
-// // 🟢 Add a new parking location
-// app.post("/parking", async (req, res) => {
-//     try {
-//       const { name, latitude, longitude } = req.body;
-  
-//       if (!name || !latitude || !longitude) {
-//         return res.status(400).json({ error: "All fields are required" });
-//       }
-  
-//       const newLocation = new ParkingLocation({ name, latitude, longitude });
-//       await newLocation.save();
-      
-//       res.json({ message: "Location added successfully", location: newLocation });
-//     } catch (error) {
-//       console.error("Error adding parking location:", error);
-//       res.status(500).json({ error: "Failed to add location" });
-//     }
-//   });
-  
-//   // 🟢 Get all parking locations
-//   app.get("/parking", async (req, res) => {
-//     try {
-//       const locations = await ParkingLocation.find();
-//       res.json(locations);
-//     } catch (error) {
-//       console.error("Error fetching parking locations:", error);
-//       res.status(500).json({ error: "Failed to fetch parking locations" });
-//     }
-//   });
-
-// // Start Server
-// const port = 3001;
-// app.listen(port, () => {
-//     console.log(`Server started at http://localhost:${port}`);
-// });
-
-
-
-// ----------------------------------------
-
+// import dotenv from "dotenv";
 const express = require("express");
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs"); // Hashing library
 const cors = require("cors");
+const Stripe = require("stripe");
 require("dotenv").config();
 const { dbConnect } = require("./db.js");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-dbConnect(); // ✅ Ensure DB is connected before defining schemas
+// Connect to Database
+dbConnect(); 
+
+mongoose.connection.once("open", () => {
+    console.log("Connected to database: " + mongoose.connection.name);
+});
 
 // 🔹 User Schema
 const loginSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Hashed password
+    password: { type: String, required: true }, 
     email: { type: String, required: true, unique: true },
 });
 const loginModel = mongoose.model("login_details", loginSchema);
-
-// 🔹 Parking Location Schema
-const parkingSchema = new mongoose.Schema({
-    name: String,
-    latitude: Number,
-    longitude: Number,
-});
-const ParkingLocation = mongoose.model("ParkingLocation", parkingSchema);
 
 
 const bookingSchema = new mongoose.Schema({
@@ -177,131 +37,346 @@ const bookingSchema = new mongoose.Schema({
     perHourPrice: { type: Number, required: true },
     duration: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
-  });
+});
 const Booking = mongoose.model("Booking", bookingSchema);
 
-
-
-
-
-
-
-
-mongoose.connection.once("open", () => {
-    console.log("Connected to database: " + mongoose.connection.name);
+// 🚗 🔹 VEHICLE SERVICE SCHEMA (NEW ADDITION)
+const vehicleSchema = new mongoose.Schema({
+  type: String,
+  image: String,
+  minPrice:Number,
+  maxPrice:Number
 });
 
-// ✅ Register User (With Password Hashing)
-// const bcrypt = require("bcrypt");
+const VehicleModel = mongoose.model("Vehicle", vehicleSchema);
 
-app.post("/register",async(req,res)=>{
-      try{
-          let data = await loginModel.create(req.body);
-          
-          console.log(data);
-          res.json(data);
-      } 
-      catch(err) {
-          console.error("Error in getting data:", err);
-          res.status(500).json({ error: "Internal Server Error" });
-      }
-  
-  })
 
-// ✅ Login Route (With Password Verification)
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
 
-  // ✅ Validate input
-  if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
-  }
+const parkingSchema = new mongoose.Schema({
+vehicletype:String,
+  name: String,
+  image: String,
+  buildingType: String,
+  security: String,
+  suitable: String,
+  address: String,
+  description: String,
+  lat: Number,
+  lng: Number,
+  price: Number,
+  totalSlots: Number,
+  availableSlots: Number
+}, { timestamps: true });
 
-  try {
-      // ✅ Find user by username
-      const user = await loginModel.findOne({ username ,password});
+const ParkingLocation = mongoose.model("ParkingLocation", parkingSchema);
 
-      if (!user) {
-          return res.status(404).json({ error: "User not found" });
-      }
-
-      // ✅ Check if password matches (plain text comparison for now)
-      if (user.password !== password) {
-          return res.status(401).json({ error: "Invalid credentials" });
-      }
-
-      res.json( {success: true});
-  } catch (err) {
-      console.error("Error in login:", err);
-      res.status(500).json({ error: "Internal Server Error" });
-  }
+// the Payment Schema
+const paymentSchema = new mongoose.Schema({
+  paymentIntentId: String, // The unique transaction ID from Stripe
+  clientSecret: String,    // The unique secret for this specific transaction
+  paymentMethodId: String, // ID of the card used
+  amount: Number,
+  currency: String,
+  userId: String,          // The ID of the user who paid
+  status: String,          // e.g., 'succeeded'
+  createdAt: { type: Date, default: Date.now }
 });
 
+const Payment = mongoose.model("Payment", paymentSchema);
+
+// Register User
 
 
-
-// ✅ Add a new parking location
-app.post("/parking", async (req, res) => {
+app.post("/register", async (req, res) => {
+    const {username} =await req.body
     try {
-        const { name, latitude, longitude } = req.body;
+        console.log(await req.body)
+        const existingUser = await loginModel.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ message: "Username already exists" });
+}
+        let data = await loginModel.create(req.body);
+        console.log("User Registered:", data);
+        res.json(data);
+    } catch (err) {
+        console.error("Error in register:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
-        if (!name || !latitude || !longitude) {
-            return res.status(400).json({ error: "All fields are required" });
+// Login User
+app.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+    }
+
+    try {
+        const user = await loginModel.findOne({ email, password });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
         }
 
-        const newLocation = new ParkingLocation({ name, latitude, longitude });
-        await newLocation.save();
+        if (user.password !== password) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
 
-        res.json({ message: "Location added successfully", location: newLocation });
-    } catch (error) {
-        console.error("Error adding parking location:", error);
-        res.status(500).json({ error: "Failed to add location" });
+        res.json({ success: true, user: { email: user.email, password: user.password } });
+    } catch (err) {
+        console.error("Error in login:", err);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-// ✅ Get all parking locations
-app.get("/parking", async (req, res) => {
+app.get("/email", async (req, res) => {
     try {
-        const locations = await ParkingLocation.find();
-        res.json(locations);
+        const user = await loginModel.find();
+        res.send(user);
     } catch (error) {
-        console.error("Error fetching parking locations:", error);
-        res.status(500).json({ error: "Failed to fetch parking locations" });
+        res.status(500).json({ message: "Error fetching emails", error: error.message });
     }
 });
+
+
+
+// Add Booking
 app.post("/bookings", async (req, res) => {
     try {
-      const newBooking = new Booking(req.body);
-      await newBooking.save();
-      res.status(201).json({ success: true, message: "Booking stored successfully!", booking: newBooking });
+        const newBooking = new Booking(req.body);
+        await newBooking.save();
+        res.status(201).json({ success: true, message: "Booking stored successfully!", booking: newBooking });
     } catch (error) {
-      res.status(500).json({ success: false, message: "Error storing booking", error: error.message });
+        res.status(500).json({ success: false, message: "Error storing booking", error: error.message });
     }
-  });
-  
-  // Route to get all bookings
-  app.get("/bookings", async (req, res) => {
+});
+
+// Get all bookings
+app.get("/bookings", async (req, res) => {
     try {
-      const bookings = await Booking.find();
-      res.json(bookings);
+        const bookings = await Booking.find();
+        res.json(bookings);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching bookings", error: error.message });
+        res.status(500).json({ message: "Error fetching bookings", error: error.message });
     }
-  });
-  app.get("/email", async (req, res) => {
+});
+
+
+// ------------------------------------------
+// 🚗 VEHICLE SERVICES (NEW CODE ADDED HERE)
+// ------------------------------------------
+
+// ✅ ADMIN: Add a new vehicle service
+app.post("/add-vehicle", async (req, res) => {
     try {
-      const user = await loginModel.find        ();
-      res.send(user);
+        const { type, image,minPrice,maxPrice} = req.body;
+        
+        // Basic Validation
+        if (!type || !minPrice ||!maxPrice || !image) {
+            return res.status(400).json({ status: "error", message: "Type, Price, and Image are required." });
+        }
+
+        const newVehicle = new VehicleModel({ type, image, minPrice,maxPrice});
+        await newVehicle.save();
+        res.json({ status: "ok", message: "Vehicle added successfully!", data: newVehicle });
     } catch (error) {
-      res.status(500).json({ message: "Error fetching bookings", error: error.message });
+        console.error("Error adding vehicle:", error);
+        res.status(500).json({ status: "error", message: error.message });
     }
+});
+// ✅ ADMIN: Delete a vehicle
+app.delete("/delete-vehicle/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        await VehicleModel.findByIdAndDelete(id);
+        res.json({ status: "ok", message: "Vehicle deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting vehicle:", error);
+        res.status(500).json({ status: "error", message: error.message });
+    }
+});
+// ✅ USER: Get all vehicle services
+app.get("/get-vehicles", async (req, res) => {
+    try {
+        const vehicles = await VehicleModel.find({});
+        res.json({ status: "ok", data: vehicles });
+    } catch (error) {
+        console.error("Error fetching vehicles:", error);
+        res.status(500).json({ status: "error", message: error.message });
+    }
+});
+// ------------------------------------------
+// 📍 PARKING LOCATIONS
+// ------------------------------------------
+
+// ✅ Add new parking (Admin)
+app.post("/parking", async (req, res) => {
+  try {
+       if (req.body.vehicletype) {
+      req.body.vehicletype = req.body.vehicletype.toLowerCase();
+    }
+
+    const newParking = new ParkingLocation(req.body);
+    await newParking.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Parking added successfully",
+      data: newParking
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+app.get("/all-parkings", async (req, res) => {
+  try {
+    const parkings = await ParkingLocation.find();
+    res.json({ success: true, data: parkings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+const handleDelete = async (id) => {
+  await fetch(`http://localhost:3001/parking/${id}`, {
+    method: "DELETE",
   });
 
+  fetchParkings(); // refresh list
+};                  
 
 
-// ✅ Start Server
+// ✅ Get single parking by ID (VERY IMPORTANT)
+app.get("/parking", async (req, res) => {
+  try {
+    const type = req.query.vehicletype?.toLowerCase();
+    if (!type) {
+      return res.status(400).json({ message: "Vehicle type is required" });
+    }
+    const parking = await ParkingLocation.find({ vehicletype: type });
+    
+    if (!parking) {
+      return res.status(404).json({ message: "Parking not found" });
+    }
+
+    res.json(parking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}); 
+// ✅ UPDATE Parking
+app.put("/parking/:id", async (req, res) => {
+  try {
+    const updatedParking = await ParkingLocation.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Parking updated successfully",
+      data: updatedParking
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+// ✅ DELETE Parking
+app.delete("/parking/:id", async (req, res) => {
+  try {
+    await ParkingLocation.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: "Parking deleted successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Payment
+
+app.post("/create-payment-intent", async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100, // convert to paise/cents
+      currency: "inr",
+      automatic_payment_methods: { enabled: true },
+    });
+
+    console.log(paymentIntent,"psy")
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+
+// 2️⃣ API to SAVE Payment Data (Call this from PaymentPage)
+app.post("/save-payment", async (req, res) => {
+  try {
+    const { 
+      paymentIntentId, 
+      clientSecret, 
+      paymentMethodId, 
+      amount, 
+      currency, 
+      userId, 
+      status 
+    } = req.body;
+
+    const newPayment = new Payment({
+      paymentIntentId,
+      clientSecret,
+      paymentMethodId,
+      amount,
+      currency,
+      userId,
+      status
+    });
+
+    await newPayment.save();
+    res.status(201).json({ message: "Payment details saved successfully" });
+  } catch (error) {
+    console.error("Error saving payment:", error);
+    res.status(500).json({ error: "Failed to save payment details" });
+  }
+});
+
+// 3️⃣ API to GET All Payments (For Admin Portal)
+app.get("/admin/payments", async (req, res) => {
+  try {
+    // Sort by newest first
+    const payments = await Payment.find().sort({ createdAt: -1 }); 
+    res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch payments" });
+  }
+});
+
+// ==========================================
+// 3. START SERVER
+// ==========================================
 const port = 3001;
 app.listen(port, () => {
     console.log(`Server started at http://localhost:${port}`);
 });
-

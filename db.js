@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const dbConnect = () =>{
-    mongoose.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER}.mongodb.net/parkpay`)
+    mongoose.connect(`${process.env.Mongodb_url}`)
     .then(()=>{
         console.log("database connected !!");
         

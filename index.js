@@ -23,6 +23,7 @@ const loginSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true }, 
     email: { type: String, required: true, unique: true },
+    role: { type: String, default: "user" }
 });
 const loginModel = mongoose.model("login_details", loginSchema);
 
@@ -92,53 +93,80 @@ const Payment = mongoose.model("Payment", paymentSchema);
 
 
 app.post("/register", async (req, res) => {
-    const {username} =await req.body
-    try {
-        console.log(await req.body)
-        const existingUser = await loginModel.findOne({ username });
-        if (existingUser) {
-            return res.status(400).json({ message: "Username already exists" });
-}
-        let data = await loginModel.create(req.body);
-        console.log("User Registered:", data);
-        res.json(data);
-    } catch (err) {
-        console.error("Error in register:", err);
-        res.status(500).json({ error: "Internal Server Error" });
+  try {
+
+    const { username, email, password } = req.body;
+
+    const existingUser = await loginModel.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
     }
+
+    let role = "user";
+
+    // 👑 ADMIN CHECK
+    if (
+      email === "reddymallasaidulu999@gmail.com" &&
+      password === "Saigoud@7780"
+    ) {
+      role = "admin";
+    }
+
+    const user = await loginModel.create({
+      username,
+      email,
+      password,
+      role
+    });
+
+    res.json({
+      success: true,
+      message: "User registered successfully",
+      user
+    });
+
+  } catch (err) {
+    console.error("Error in register:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 // Login User
 app.post("/login", async (req, res) => {
-    const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: "Username and password are required" });
-    }
+  const { email, password } = req.body;
 
-    try {
-        const user = await loginModel.findOne({ email, password });
-
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        if (user.password !== password) {
-            return res.status(401).json({ error: "Invalid credentials" });
-        }
-
-        res.json({
-  success: true,
-  user: {
-    userId: user._id,   // 👈 SEND USER ID
-    email: user.email,
-    username: user.username
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password required" });
   }
-});
-    } catch (err) {
-        console.error("Error in login:", err);
-        res.status(500).json({ error: "Internal Server Error" });
+
+  try {
+
+    const user = await loginModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in login:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 app.get("/email", async (req, res) => {

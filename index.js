@@ -28,6 +28,7 @@ const loginModel = mongoose.model("login_details", loginSchema);
 
 
 const bookingSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
     ownerName: { type: String, required: true },
     phoneNumber: { type: String, required: true },
     email: { type: String, required: true },
@@ -37,6 +38,9 @@ const bookingSchema = new mongoose.Schema({
     perHourPrice: { type: Number, required: true },
     duration: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
+    transactionId: { type: String, required: true }, // ⭐ NEW FIELD
+
+  createdAt: { type: Date, default: Date.now }
 });
 const Booking = mongoose.model("Booking", bookingSchema);
 
@@ -123,7 +127,14 @@ app.post("/login", async (req, res) => {
             return res.status(401).json({ error: "Invalid credentials" });
         }
 
-        res.json({ success: true, user: { email: user.email, password: user.password } });
+        res.json({
+  success: true,
+  user: {
+    userId: user._id,   // 👈 SEND USER ID
+    email: user.email,
+    username: user.username
+  }
+});
     } catch (err) {
         console.error("Error in login:", err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -154,12 +165,24 @@ app.post("/bookings", async (req, res) => {
 
 // Get all bookings
 app.get("/bookings", async (req, res) => {
-    try {
-        const bookings = await Booking.find();
-        res.json(bookings);
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching bookings", error: error.message });
+  try {
+
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
     }
+
+    const bookings = await Booking.find({ userId });
+
+    res.json(bookings);
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching bookings",
+      error: error.message
+    });
+  }
 });
 
 

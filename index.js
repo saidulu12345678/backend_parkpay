@@ -197,14 +197,17 @@ app.post("/bookings", async (req, res) => {
 // Get all bookings
 app.get("/bookings", async (req, res) => {
   try {
-
     const { userId } = req.query;
 
-    if (!userId) {
-      return res.status(400).json({ message: "userId is required" });
-    }
+    let bookings;
 
-    const bookings = await Booking.find({ userId });
+    if (userId) {
+      // ✅ User booking
+      bookings = await Booking.find({ userId });
+    } else {
+      // ✅ Admin → Get all bookings
+      bookings = await Booking.find();
+    }
 
     res.json(bookings);
 

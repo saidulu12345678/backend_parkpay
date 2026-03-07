@@ -134,39 +134,42 @@ app.post("/register", async (req, res) => {
 
 // Login User
 app.post("/login", async (req, res) => {
-
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password required" });
-  }
-
-  try {
-
-    const user = await loginModel.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (user.password !== password) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    res.json({
+  // ADMIN LOGIN
+  if (
+    email === "reddymallasaidulu999@gmail.com" &&
+    password === "Saigoud@7780"
+  ) {
+    return res.json({
       success: true,
       user: {
-        userId: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
+        username: "Admin",
+        userId: "admin001",
+        role: "admin"
       }
     });
-
-  } catch (err) {
-    console.error("Error in login:", err);
-    res.status(500).json({ error: "Internal Server Error" });
   }
+
+  // NORMAL USER LOGIN
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.json({ success: false, message: "User not found" });
+  }
+
+  if (user.password !== password) {
+    return res.json({ success: false, message: "Invalid password" });
+  }
+
+  res.json({
+    success: true,
+    user: {
+      username: user.username,
+      userId: user._id,
+      role: user.role
+    }
+  });
 });
 
 app.get("/email", async (req, res) => {

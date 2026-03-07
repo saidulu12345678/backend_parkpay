@@ -152,7 +152,7 @@ app.post("/login", async (req, res) => {
   }
 
   // NORMAL USER LOGIN
-  const user = await user.findOne({ email });
+  const user = await loginModel.findOne({ email });
 
   if (!user) {
     return res.json({ success: false, message: "User not found" });
